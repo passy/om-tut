@@ -69,11 +69,13 @@
           (dom/button #js {:onClick #(add-contact app owner)} "Add"))))))
 
 (defn add-contact [app owner]
-  (let [new-contact (-> (om/get-node owner "new-contact")
-                         .-value
-                         parse-contact)]
+  (let [input (om/get-node owner "new-contact")
+        new-contact (-> input
+                        .-value
+                        parse-contact)]
     (when new-contact
-      (om/transact! app :contacts #(conj % new-contact)))))
+      (om/transact! app :contacts #(conj % new-contact))
+      (set! (.-value input) ""))))
 
 
 (om/root contacts-view app-state
