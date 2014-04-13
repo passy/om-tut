@@ -58,12 +58,15 @@
               (fn [xs] (vec (remove #(= contact %) xs))))
             (recur))))))
     om/IRenderState
-    (render-state [this {:keys [delete]}]
+    (render-state [this state]
       (dom/div nil
         (dom/h2 nil "Contact list")
         (apply dom/ul nil
           (om/build-all contact-view (:contacts app)
-            {:init-state {:delete delete}}))))))
+            {:init-state state}))
+        (dom/div nil
+          (dom/input #js {:ref "new-contact" :placeholder "New Contact"})
+          (dom/button #js {:onClick #(add-contact app owner)} "Add"))))))
 
 (defn add-contact [app owner]
   (let [new-contact (-> (om/get-node owner "new-contact")
