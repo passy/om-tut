@@ -38,22 +38,49 @@
 (defmethod entry-view :professor
   [person owner] (professor-view person owner))
 
+(defn student-view [student owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/li nil (display-name student)))))
+
+(defn professor-view [professor owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/li nil
+        (dom/div nil (display-name professor))
+        (dom/label nil "Classes")
+        (apply dom/ul nil
+          (map #(dom/li nil %) (:classes professor)))))))
+
 (defn people [app]
   (->> (:people app)
     (mapv (fn [x]
             (if (:classes x)
               (update-in x [:classes]
                 (fn [cs] (mapv (:classes app) cs)))
-             x)))))
+               x)))))
 
 (defn registry-view [app owner]
   (reify
     om/IRenderState
     (render-state [_ state]
-      (dom/div nil
+      (dom/div #js {:id "registry"}
         (dom/h2 nil "Registry")
         (apply dom/ul nil
           (om/build-all entry-view (people app)))))))
 
+(defn classes-view [app owner]
+  (reify om/IRender
+    (render [_]
+      (dom/div #js {:id "classes"}
+        (dom/h2 nil "Classes")
+        (apply dom/ul nil
+          (map #(dom/li nil %) (vals (:classes app))))))))
+
 (om/root registry-view app-state
   {:target (. js/document (getElementById "registry"))})
+
+(om/root classes-view app-state
+  {:target (. js/document (getElementById "classes"))})
