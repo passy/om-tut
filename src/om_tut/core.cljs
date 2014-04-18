@@ -5,6 +5,16 @@
 
 (enable-console-print!)
 
+(extend-type string
+  ICloneable
+  (-clone [s] (js/String. s)))
+
+(extend-type js/String
+  ICloneable
+  (-clone [s] (js/String. s))
+  om/IValue
+  (-value [s] (str s)))
+
 (def app-state
   (atom
    {:people
@@ -44,6 +54,17 @@
     (render [_]
       (dom/li nil (display-name student)))))
 
+(defn display [show]
+  (if show
+    #js {}
+    #js {:display "none"}))
+
+(defn handle-change [e text owner]
+  (om/transact! text (fn [_] (.. e -target -value))))
+
+(defn commit-change [text owner]
+  (om/set-state! owner :editing false))
+
 (defn professor-view [professor owner]
   (reify
     om/IRender
@@ -52,7 +73,7 @@
         (dom/div nil (display-name professor))
         (dom/label nil "Classes")
         (apply dom/ul nil
-          (map #(dom/li nil %) (:classes professor)))))))
+          (map #(dom/li nil (om/value %)) (:classes professor)))))))
 
 (defn people [app]
   (->> (:people app)
@@ -61,6 +82,27 @@
               (update-in x [:classes]
                 (fn [cs] (mapv (:classes app) cs)))
                x)))))
+
+(defn editable [text owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:editing false})
+    om/IRenderState
+    (render-state [_ {:keys [editing]}]
+      (dom/li nil
+        (dom/span #js {:style (display (not editing))} (om/value text))
+        (dom/input
+           #js {:style (display editing)
+                :value (om/value text)
+                :onChange #(handle-change % text owner)
+                :onKeyPress #(when (== (.-keyCode %) 13)
+                               (commit-change text owner))
+                :onBlur (fn [e] (commit-change text owner))})
+        (dom/button
+           #js {:style (display (not editing))
+                :onClick #(om/set-state! owner :editing true)}
+           "Edit")))))
 
 (defn registry-view [app owner]
   (reify
@@ -77,7 +119,7 @@
       (dom/div #js {:id "classes"}
         (dom/h2 nil "Classes")
         (apply dom/ul nil
-          (map #(dom/li nil %) (vals (:classes app))))))))
+          (map #(om/build editable %) (vals (:classes app))))))))
 
 (om/root registry-view app-state
   {:target (. js/document (getElementById "registry"))})
